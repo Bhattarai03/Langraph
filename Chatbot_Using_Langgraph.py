@@ -15,8 +15,14 @@ class ChatState(TypedDict):
 model=ChatGroq(model="qwen/qwen3.6-27b")
 async def chatbot(state:ChatState)->ChatState:
     topic=state['message']
-    response=await model.ainvoke(topic)
-    return {'message':[response]}
+    finalresponse=None
+    async for chunk in model.astream(topic):
+        if finalresponse is None:
+            finalresponse=chunk
+        else:
+            finalresponse+=chunk
+
+    return {"message":[finalresponse]}
 
 
 graph=StateGraph(ChatState)
@@ -30,7 +36,7 @@ chatbot=graph.compile(checkpointer=memory)
 
 async def main():
     while True:
-        message=str(input("Enter a message:"))
+        message=await asyncio.to_thread(input,"Enter a message:")
         config={'configurable':{'thread_id':'User_no1'}}
         print(f"user:{message}")
 
@@ -40,10 +46,11 @@ async def main():
         initial_state={
             "message":[HumanMessage(content=message)]
         }
-        final_state=await chatbot.ainvoke(initial_state,config=config)
-        print(f"AI:{final_state['message'][-1].content}")
-
+        async for mssg_chunk,metadata in chatbot.astream(initial_state,config=config,stream_mode='messages'):
+            if mssg_chunk:
+                print(mssg_chunk.content,end="",flush=True)
+        
         history=await chatbot.aget_state(config=config)
         print(history)
-        
+
 asyncio.run(main())
