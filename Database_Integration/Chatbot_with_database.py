@@ -43,7 +43,7 @@ workflow.add_edge("cb", END)
 
 # 5. CLI Execution Loop
 async def main():
-    config = {"configurable": {"thread_id": "User_no1"}}
+    config = {"configurable": {"thread_id": "User_no2"}}
 
     # Use the context manager to open and automatically manage the async database lifecycle
     async with AsyncSqliteSaver.from_conn_string("Chatbot.db") as memory:
